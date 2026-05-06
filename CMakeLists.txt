@@ -188,7 +188,15 @@ FetchContent_Declare(
         GIT_TAG v2.0.2
 )
 
+# fmt renamed master -> main, pin to specific tag
+set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
 set(FMT_MODULE OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG 11.1.3
+)
+
 FetchContent_MakeAvailable(libhat entt nes fmt magic_enum LuaBridge safetyhook jsoncpp discord-rpc rift)
 
 target_link_libraries(Flarial PRIVATE jsoncpp safetyhook libcurl ws2_32.lib crypt32.lib normaliz.lib wldap32.lib LuaBridge lua_static libhat fmt::fmt EnTT::EnTT NES windowscodecs.lib urlmon.lib dwrite.lib d3d12.lib dxgi.lib d3d11.lib d2d1.lib wininet.lib setupapi.lib version FreeType magic_enum runtimeobject discord-rpc rift)
