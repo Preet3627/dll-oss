@@ -51,7 +51,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup MSVC (ARM64)
+      - name: Setup MSVC (ARM64 cross-compile)
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: arm64
@@ -59,8 +59,34 @@ jobs:
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
+      - name: Find MSVC ARM64 compiler
+        shell: pwsh
+        run: |
+          $vcTools = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+          $version = (Get-ChildItem $vcTools -Directory | Sort-Object Name -Descending | Select-Object -First 1).Name
+          $clPath = "$vcTools\$version\bin\Hostx64\arm64\cl.exe"
+          $linkPath = "$vcTools\$version\bin\Hostx64\arm64\link.exe"
+          if (Test-Path $clPath) {
+            echo "MSVC_ARM64_CL=$clPath" >> $env:GITHUB_ENV
+            echo "MSVC_ARM64_LINK=$linkPath" >> $env:GITHUB_ENV
+            Write-Host "Found MSVC ARM64 compiler: $clPath"
+          } else {
+            Write-Host "ERROR: MSVC ARM64 compiler not found"
+            exit 1
+          }
+
       - name: Configure CMake (ARM64)
-        run: cmake -G Ninja -S . -B build-arm64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
+        env:
+          CC: ${{ env.MSVC_ARM64_CL }}
+          CXX: ${{ env.MSVC_ARM64_CL }}
+        run: |
+          cmake -G Ninja -S . -B build-arm64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_CXX_STANDARD=23 `
+            -DCMAKE_SYSTEM_NAME=Windows `
+            -DCMAKE_C_COMPILER="${{ env.MSVC_ARM64_CL }}" `
+            -DCMAKE_CXX_COMPILER="${{ env.MSVC_ARM64_CL }}" `
+            -DCMAKE_LINKER="${{ env.MSVC_ARM64_LINK }}"
 
       - name: Build DLL (ARM64)
         run: ninja -C build-arm64 -j $env:NUMBER_OF_PROCESSORS
