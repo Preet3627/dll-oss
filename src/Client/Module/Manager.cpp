@@ -133,6 +133,7 @@
 #include "Modules/PitchDisplay/PitchDisplay.hpp"
 #include "Modules/ExperienceInfo/ExperienceInfo.hpp"
 #include "Modules/DurabilityWarning/DurabilityWarning.hpp"
+#include "Modules/MetalSupport/MetalSupport.hpp"
 // #include "Modules/PanoramaShader/PanoramaShader.hpp"  // Uses CubemapBackgroundScreenRenderHook (render thread safe)
 
 #ifdef COMPILE_DOOM
@@ -335,6 +336,7 @@ void ModuleManager::initialize() {
 
 	addModule<PitchDisplay>();
 	addModule<DurabilityWarning>();
+	addModule<MetalSupport>();
 
 #ifdef __DEBUG__
 	// addModule<FemaleGenderMod>();
