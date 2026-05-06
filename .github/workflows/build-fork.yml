@@ -26,6 +26,11 @@ jobs:
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
+      - name: Clean previous builds
+        run: |
+          if (Test-Path build-x64) { Remove-Item -Recurse -Force build-x64 }
+          if (Test-Path build-arm64) { Remove-Item -Recurse -Force build-arm64 }
+
       - name: Configure CMake (x64)
         run: cmake -G Ninja -S . -B build-x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
 
@@ -41,95 +46,12 @@ jobs:
             build-x64/Flarial.pdb
           retention-days: 30
 
-  build-windows-arm64:
-    name: Build DLL (Windows ARM64)
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup MSVC (ARM64 cross-compile)
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: arm64
-
-      - name: Setup Ninja
-        uses: seanmiddleditch/gha-setup-ninja@v5
-
-      - name: Find MSVC ARM64 compiler
-        shell: pwsh
-        run: |
-          $vcTools = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
-          $version = (Get-ChildItem $vcTools -Directory | Sort-Object Name -Descending | Select-Object -First 1).Name
-          $clPath = "$vcTools\$version\bin\Hostx64\arm64\cl.exe"
-          $linkPath = "$vcTools\$version\bin\Hostx64\arm64\link.exe"
-          if (Test-Path $clPath) {
-            echo "MSVC_ARM64_CL=$clPath" >> $env:GITHUB_ENV
-            echo "MSVC_ARM64_LINK=$linkPath" >> $env:GITHUB_ENV
-            Write-Host "Found MSVC ARM64 compiler: $clPath"
-          } else {
-            Write-Host "ERROR: MSVC ARM64 compiler not found"
-            exit 1
-          }
-
-      - name: Configure CMake (ARM64)
-        env:
-          CC: ${{ env.MSVC_ARM64_CL }}
-          CXX: ${{ env.MSVC_ARM64_CL }}
-        run: |
-          cmake -G Ninja -S . -B build-arm64 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_CXX_STANDARD=23 `
-            -DCMAKE_SYSTEM_NAME=Windows `
-            -DCMAKE_C_COMPILER="${{ env.MSVC_ARM64_CL }}" `
-            -DCMAKE_CXX_COMPILER="${{ env.MSVC_ARM64_CL }}" `
-            -DCMAKE_LINKER="${{ env.MSVC_ARM64_LINK }}"
-
-      - name: Build DLL (ARM64)
-        run: ninja -C build-arm64 -j $env:NUMBER_OF_PROCESSORS
-
-      - name: Upload ARM64 DLL Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Flarial-arm64-Release
-          path: |
-            build-arm64/Flarial.dll
-            build-arm64/Flarial.pdb
-          retention-days: 30
-
-  upload-release:
-    name: Create Release (workflow_dispatch only)
-    runs-on: ubuntu-latest
-    needs: [build-windows-x64, build-windows-arm64]
-    if: github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Download x64 Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: Flarial-x64-Release
-          path: artifacts/x64
-
-      - name: Download ARM64 Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: Flarial-arm64-Release
-          path: artifacts/arm64
-
-      - name: Upload Release
+      - name: Upload as Release (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/x64/Flarial.dll
-            artifacts/arm64/Flarial.dll
+          files: build-x64/Flarial.dll
           tag_name: fork-ci-${{ github.sha }}
-          name: "Fork CI Build (x64 + ARM64)"
-          body: |
-            Auto-built from ${{ github.sha }}
-
-            - **Flarial-x64.dll** — Windows x64
-            - **Flarial-arm64.dll** — Windows ARM64 (VMware Fusion / Parallels)
+          name: "Fork CI Build"
+          body: "Auto-built from ${{ github.sha }}"
           token: ${{ secrets.GITHUB_TOKEN }}
