@@ -1,0 +1,72 @@
+name: Build Flarial DLL (Fork CI)
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "*" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build DLL (Windows x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: '3.28.x'
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      - name: Install cppwinrt
+        shell: pwsh
+        run: |
+          $sdkVer = "10.0.26100.0"
+          $includePath = "C:\Program Files (x86)\Windows Kits\10\Include\$sdkVer\cppwinrt"
+          if (Test-Path $includePath) {
+            echo "CPPWINRT_PATH=$includePath" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "Looking for Windows SDK include path..."
+            Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include" -Directory | ForEach-Object { $_.FullName }
+          }
+
+      - name: Configure CMake
+        run: |
+          cmake -G Ninja -S . -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_CXX_STANDARD=23
+
+      - name: Build DLL
+        run: ninja -C build -j $env:NUMBER_OF_PROCESSORS
+
+      - name: Upload DLL Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Flarial-x64-Release
+          path: |
+            build/Flarial.dll
+            build/Flarial.pdb
+          retention-days: 30
+
+      - name: Upload as Release (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/Flarial.dll
+          tag_name: fork-ci-${{ github.sha }}
+          name: "Fork CI Build"
+          body: "Auto-built from ${{ github.sha }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
