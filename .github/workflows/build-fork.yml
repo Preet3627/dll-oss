@@ -18,25 +18,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup MSVC
+      - name: Setup MSVC (x64)
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
 
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
       - name: Configure CMake (x64)
-        run: |
-          cmake -G Ninja -S . -B build-x64 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_CXX_STANDARD=23 `
-            -DCMAKE_GENERATOR_PLATFORM=x64
+        run: cmake -G Ninja -S . -B build-x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
 
       - name: Build DLL (x64)
         run: ninja -C build-x64 -j $env:NUMBER_OF_PROCESSORS
@@ -60,25 +51,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup MSVC
+      - name: Setup MSVC (ARM64)
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: arm64
-
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: '3.28.x'
 
       - name: Setup Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
       - name: Configure CMake (ARM64)
-        run: |
-          cmake -G Ninja -S . -B build-arm64 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_CXX_STANDARD=23 `
-            -DCMAKE_GENERATOR_PLATFORM=ARM64
+        run: cmake -G Ninja -S . -B build-arm64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
 
       - name: Build DLL (ARM64)
         run: ninja -C build-arm64 -j $env:NUMBER_OF_PROCESSORS
@@ -121,7 +103,7 @@ jobs:
           name: "Fork CI Build (x64 + ARM64)"
           body: |
             Auto-built from ${{ github.sha }}
-            
+
             - **Flarial-x64.dll** — Windows x64
             - **Flarial-arm64.dll** — Windows ARM64 (VMware Fusion / Parallels)
           token: ${{ secrets.GITHUB_TOKEN }}
